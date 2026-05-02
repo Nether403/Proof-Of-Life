@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
-import { useRoute, useLocation, Link } from "wouter";
+import { useRoute, Link } from "wouter";
+import { useSearch } from "wouter";
 import { Layout, DossierSkeleton } from "@/components/layout";
 import { useProjectForEdit, useUpdateProject, useCreateMilestone, useDeleteMilestone, useUpdateMilestone, useGenerateSummary, useGenerateDemoScript } from "@/hooks/use-api";
 import { localStorageKeyForProject, compressImageToDataUrl, SCREENSHOT_INPUT_MAX_BYTES, SCREENSHOT_ALLOWED_TYPES, shareLinkForSlug, type Milestone, type ProjectWithToken, type UpdateProjectBody } from "@/lib/api";
@@ -17,9 +18,18 @@ type EditableValue = string | boolean;
 export default function EditProject() {
   const [, params] = useRoute("/edit/:id");
   const id = params?.id ? parseInt(params.id) : null;
-  const [location] = useLocation();
-  const searchParams = new URLSearchParams(location.split('?')[1]);
-  const tokenFromUrl = searchParams.get('token');
+  // wouter v3's useLocation() returns pathname only; the query string lives in
+  // useSearch() (and window.location.search as a defensive fallback for SSR/edge
+  // cases). The query token is the primary source so a fresh browser opening
+  // the creator URL works without any prior localStorage state.
+  const search = useSearch();
+  const rawSearch =
+    search ||
+    (typeof window !== "undefined" ? window.location.search : "");
+  const searchParams = new URLSearchParams(
+    rawSearch.startsWith("?") ? rawSearch.slice(1) : rawSearch,
+  );
+  const tokenFromUrl = searchParams.get("token");
   const tokenFromStorage = id ? localStorage.getItem(localStorageKeyForProject(id)) : null;
   const token = tokenFromUrl || tokenFromStorage;
 
