@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Proof of Life"
+version = "1.0.0"
+id = "artifacts/proof-of-life"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 24722
+
+[services.development]
+run = "pnpm --filter @workspace/proof-of-life run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/proof-of-life", "run", "build" ]
+publicDir = "artifacts/proof-of-life/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "24722"
+BASE_PATH = "/"
