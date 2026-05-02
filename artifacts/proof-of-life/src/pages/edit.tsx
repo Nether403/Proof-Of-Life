@@ -125,7 +125,7 @@ export default function EditProject() {
           </div>
         </div>
 
-        {project.published && (
+        {localData?.published && (
           <div className="bg-primary/10 border border-primary/30 p-6 flex flex-col items-center justify-center space-y-4">
             <div className="font-mono text-sm tracking-widest text-primary uppercase">
               Case File is Public
