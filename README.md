@@ -1,3 +1,6 @@
+<img width="1785" height="899" alt="image" src="https://github.com/user-attachments/assets/a1bbc4c4-32ac-4a9f-b4de-17c93f388634" />
+
+
 # Proof of Life
 
 **Your idea was dead this morning. Prove it’s alive now.**
