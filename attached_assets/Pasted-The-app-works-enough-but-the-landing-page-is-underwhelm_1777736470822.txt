@@ -1,0 +1,56 @@
+The app works enough, but the landing page is underwhelming and too abstract. Do a focused landing-page and layout polish pass. Do not change the backend or data model.
+
+Main problems to fix:
+1. The headline must clearly explain the product. Bring back the stronger line:
+   “Your idea was dead this morning. Prove it’s alive now.”
+   Use “Document the resurrection” only as a small label or supporting phrase, not the main headline.
+
+2. The current layout feels too narrow and timid. The shared Layout component uses max-w-4xl, which makes the page feel small on desktop. Add a Layout size variant:
+   - default: max-w-4xl
+   - wide: max-w-7xl
+   Use wide layout for the landing page and public proof page.
+
+3. Rework the landing page into a cinematic two-column hero:
+   LEFT:
+   - small mono label: DIRECTIVE 001 / DOCUMENT THE RESURRECTION
+   - large headline: “Your idea was dead this morning. Prove it’s alive now.”
+   - subhead: “Turn a 24-hour sprint into a judge-ready proof page: timeline, screenshots, blockers, breakthroughs, demo script, and before/after story.”
+   - primary CTA: “Create Proof Page”
+   - secondary CTA: “View Example”
+   - small supporting line: “Built for judges scanning progress, execution, and story.”
+
+   RIGHT:
+   - large dossier preview card using the seeded example
+   - show status “Proof status: Alive”
+   - title, one-liner, exhibit count, breakthroughs, blockers
+   - mini before/after panel
+   - mini timeline with 3 milestone rows
+   - button/link: “Open full dossier →”
+
+4. Keep the evidence-room/case-file aesthetic, but make it more product-clear. Avoid making every button sound like fictional bureaucracy. Use clear labels first, flavor text second.
+
+5. Improve depth:
+   - subtle amber glow behind the dossier preview
+   - stronger card borders
+   - bigger editorial typography
+   - less tiny centered content
+   - more asymmetric composition
+   - use the existing noise/redaction/alive-pill styling, but don’t overdo it.
+
+6. The public proof page should also use the wider layout, but do not redesign it yet unless needed for spacing.
+
+7. Preserve all current functionality:
+   - create project
+   - resume edit link
+   - view example
+   - seeded example stats
+   - existing routes
+
+Success criteria:
+On a desktop screenshot, the landing page should instantly communicate:
+- what the app does
+- why it matters for a 24-hour buildathon
+- what a finished proof page looks like
+- where to click next
+
+Do not spend time on new features. This is a focused visual/product-clarity pass.
