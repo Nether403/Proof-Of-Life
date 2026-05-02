@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useRoute, useLocation, Link } from "wouter";
 import { Layout, DossierSkeleton } from "@/components/layout";
 import { useProjectForEdit, useUpdateProject, useCreateMilestone, useDeleteMilestone, useUpdateMilestone, useGenerateSummary, useGenerateDemoScript } from "@/hooks/use-api";
-import { localStorageKeyForProject, fileToDataUrl, SCREENSHOT_MAX_BYTES, SCREENSHOT_ALLOWED_TYPES, shareLinkForSlug, type Milestone, type ProjectWithToken, type UpdateProjectBody } from "@/lib/api";
+import { localStorageKeyForProject, compressImageToDataUrl, SCREENSHOT_INPUT_MAX_BYTES, SCREENSHOT_ALLOWED_TYPES, shareLinkForSlug, type Milestone, type ProjectWithToken, type UpdateProjectBody } from "@/lib/api";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -327,16 +327,16 @@ function MilestoneManager({
       toast({ title: "Invalid format", description: "Only PNG, JPG, WEBP allowed", variant: "destructive" });
       return;
     }
-    if (file.size > SCREENSHOT_MAX_BYTES) {
-      toast({ title: "File too large", description: "Must be under 500KB (stored inline)", variant: "destructive" });
+    if (file.size > SCREENSHOT_INPUT_MAX_BYTES) {
+      toast({ title: "File too large", description: "Source image must be under 10 MB", variant: "destructive" });
       return;
     }
 
     try {
-      const dataUrl = await fileToDataUrl(file);
+      const dataUrl = await compressImageToDataUrl(file);
       setNewMilestone({ ...newMilestone, screenshot_data: dataUrl });
     } catch {
-      toast({ title: "Error processing image", variant: "destructive" });
+      toast({ title: "Could not compress screenshot", description: "Try a smaller or simpler image", variant: "destructive" });
     }
   };
 

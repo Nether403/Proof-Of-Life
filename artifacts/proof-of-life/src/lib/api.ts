@@ -208,7 +208,67 @@ export function fileToDataUrl(file: File): Promise<string> {
   });
 }
 
+/**
+ * Compress an image File to a JPEG or WebP data URL bounded by max width and
+ * total bytes. Resizes by power-of-two on the canvas long edge until the
+ * encoded payload fits under SCREENSHOT_MAX_BYTES, then drops quality.
+ * Returns the original (just base64-encoded) if it already fits without
+ * resampling.
+ */
+export async function compressImageToDataUrl(
+  file: File,
+  opts: { maxWidth?: number; maxBytes?: number; mime?: "image/jpeg" | "image/webp" } = {},
+): Promise<string> {
+  const maxWidth = opts.maxWidth ?? 1600;
+  const maxBytes = opts.maxBytes ?? SCREENSHOT_MAX_BYTES;
+  const mime = opts.mime ?? "image/webp";
+
+  const original = await fileToDataUrl(file);
+  // Already fits and is a supported in-place format → keep bytes as-is.
+  if (
+    original.length * 0.75 <= maxBytes &&
+    SCREENSHOT_ALLOWED_TYPES.includes(file.type)
+  ) {
+    return original;
+  }
+
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const i = new Image();
+    i.onload = () => resolve(i);
+    i.onerror = () => reject(new Error("Could not decode image"));
+    i.src = original;
+  });
+
+  let width = Math.min(img.naturalWidth || img.width, maxWidth);
+  let height = Math.round(
+    ((img.naturalHeight || img.height) * width) / (img.naturalWidth || img.width),
+  );
+  let quality = 0.85;
+
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("Canvas 2D context unavailable");
+    ctx.drawImage(img, 0, 0, width, height);
+    const out = canvas.toDataURL(mime, quality);
+    if (out.length * 0.75 <= maxBytes) return out;
+    if (quality > 0.5) {
+      quality -= 0.15;
+    } else {
+      width = Math.round(width * 0.75);
+      height = Math.round(height * 0.75);
+      quality = 0.8;
+    }
+  }
+  throw new Error("Could not compress screenshot under size cap");
+}
+
 export const SCREENSHOT_MAX_BYTES = 500 * 1024;
+// Pre-compression cap. Anything bigger than this on disk is rejected before
+// we even try to resample, to avoid hanging the browser on huge inputs.
+export const SCREENSHOT_INPUT_MAX_BYTES = 10 * 1024 * 1024;
 export const SCREENSHOT_ALLOWED_TYPES = [
   "image/png",
   "image/jpeg",
