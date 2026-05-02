@@ -90,9 +90,11 @@ async function request<T>(
     } catch {
       // ignore
     }
-    const msg =
-      (body && typeof body === "object" && "error" in body && String((body as { error: unknown }).error)) ||
-      `Request failed: ${res.status}`;
+    let msg = `Request failed: ${res.status}`;
+    if (body && typeof body === "object" && "error" in body) {
+      const e = (body as { error: unknown }).error;
+      if (typeof e === "string" && e.length > 0) msg = e;
+    }
     throw new ApiError(msg, res.status);
   }
   return (await res.json()) as T;

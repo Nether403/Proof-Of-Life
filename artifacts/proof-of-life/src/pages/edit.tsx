@@ -29,7 +29,7 @@ export default function EditProject() {
   const { toast } = useToast();
 
   const [localData, setLocalData] = useState<any>(null);
-  const saveTimeout = useRef<NodeJS.Timeout>();
+  const saveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (project && !localData) {
@@ -239,7 +239,10 @@ export default function EditProject() {
 function MilestoneManager({ project, token }: { project: any; token: string }) {
   const createMilestone = useCreateMilestone(project.id, token);
   const deleteMilestone = useDeleteMilestone(project.id, token);
+  const updateMilestone = useUpdateMilestone(project.id, token);
   const { toast } = useToast();
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editDraft, setEditDraft] = useState<any>(null);
   
   const [isAdding, setIsAdding] = useState(false);
   const [newMilestone, setNewMilestone] = useState<any>({
@@ -366,38 +369,222 @@ function MilestoneManager({ project, token }: { project: any; token: string }) {
       )}
 
       <div className="space-y-4">
-        {project.milestones?.sort((a: any, b: any) => new Date(b.occurred_at).getTime() - new Date(a.occurred_at).getTime()).map((m: any) => (
-          <div key={m.id} className="border border-border p-4 flex justify-between items-start">
-            <div className="space-y-1">
-              <div className="flex items-center gap-3">
-                <span className="font-mono text-xs text-muted-foreground">
-                  {new Date(m.occurred_at).toLocaleTimeString()}
-                </span>
-                <span className={`text-xs font-mono uppercase px-2 py-0.5 ${
-                  m.breakthrough ? "bg-primary/20 text-primary border border-primary/30" : 
-                  m.blocker ? "bg-destructive/20 text-destructive border border-destructive/30" : 
-                  "bg-secondary text-secondary-foreground"
-                }`}>
-                  {m.breakthrough ? "Breakthrough" : m.blocker ? "Blocker Survived" : "Update"}
-                </span>
-              </div>
-              <h3 className="font-serif font-bold text-lg">{m.title}</h3>
-              {m.screenshot_data && (
-                <div className="text-xs font-mono text-muted-foreground mt-2 border border-border inline-block px-2 py-1">
-                  Exhibit Attached
+        {(() => {
+          const ordered = [...(project.milestones ?? [])].sort(
+            (a: any, b: any) => a.sort_order - b.sort_order,
+          );
+          const moveMilestone = (idx: number, dir: -1 | 1) => {
+            const swapWith = idx + dir;
+            if (swapWith < 0 || swapWith >= ordered.length) return;
+            const a = ordered[idx];
+            const b = ordered[swapWith];
+            updateMilestone.mutate({
+              milestoneId: a.id,
+              body: { sort_order: b.sort_order },
+            });
+            updateMilestone.mutate({
+              milestoneId: b.id,
+              body: { sort_order: a.sort_order },
+            });
+          };
+          const startEdit = (m: any) => {
+            setEditingId(m.id);
+            setEditDraft({
+              title: m.title,
+              description: m.description ?? "",
+              type: m.breakthrough
+                ? "breakthrough"
+                : m.blocker
+                ? "blocker"
+                : m.type ?? "update",
+              occurred_at: new Date(m.occurred_at).toISOString().slice(0, 16),
+            });
+          };
+          const saveEdit = (id: number) => {
+            const isBreakthrough = editDraft.type === "breakthrough";
+            const isBlocker = editDraft.type === "blocker";
+            updateMilestone.mutate(
+              {
+                milestoneId: id,
+                body: {
+                  title: editDraft.title,
+                  description: editDraft.description,
+                  type: editDraft.type,
+                  breakthrough: isBreakthrough,
+                  blocker: isBlocker,
+                  occurred_at: new Date(editDraft.occurred_at).toISOString(),
+                },
+              },
+              {
+                onSuccess: () => {
+                  setEditingId(null);
+                  setEditDraft(null);
+                },
+              },
+            );
+          };
+          return ordered.map((m: any, idx: number) => (
+            <div
+              key={m.id}
+              className="border border-border p-4 flex flex-col gap-3"
+            >
+              {editingId === m.id ? (
+                <div className="space-y-3">
+                  <Input
+                    value={editDraft.title}
+                    onChange={(e) =>
+                      setEditDraft({ ...editDraft, title: e.target.value })
+                    }
+                    className="bg-background border-border"
+                  />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <Select
+                      value={editDraft.type}
+                      onValueChange={(v) =>
+                        setEditDraft({ ...editDraft, type: v })
+                      }
+                    >
+                      <SelectTrigger className="bg-background border-border">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="update">Update</SelectItem>
+                        <SelectItem value="breakthrough">Breakthrough</SelectItem>
+                        <SelectItem value="blocker">Blocker Survived</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      type="datetime-local"
+                      value={editDraft.occurred_at}
+                      onChange={(e) =>
+                        setEditDraft({
+                          ...editDraft,
+                          occurred_at: e.target.value,
+                        })
+                      }
+                      className="bg-background border-border font-mono text-xs"
+                    />
+                  </div>
+                  <Textarea
+                    value={editDraft.description}
+                    onChange={(e) =>
+                      setEditDraft({
+                        ...editDraft,
+                        description: e.target.value,
+                      })
+                    }
+                    className="bg-background border-border"
+                  />
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => saveEdit(m.id)}
+                      disabled={!editDraft.title || updateMilestone.isPending}
+                      className="font-mono uppercase text-xs"
+                      size="sm"
+                    >
+                      Save
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setEditingId(null);
+                        setEditDraft(null);
+                      }}
+                      className="font-mono uppercase text-xs"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex justify-between items-start gap-4">
+                  <div className="space-y-1 flex-1">
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <span className="font-mono text-xs text-muted-foreground">
+                        #{String(idx + 1).padStart(2, "0")} ·{" "}
+                        {new Date(m.occurred_at).toLocaleString()}
+                      </span>
+                      <span
+                        className={`text-xs font-mono uppercase px-2 py-0.5 ${
+                          m.breakthrough
+                            ? "bg-primary/20 text-primary border border-primary/30"
+                            : m.blocker
+                            ? "bg-destructive/20 text-destructive border border-destructive/30"
+                            : "bg-secondary text-secondary-foreground"
+                        }`}
+                      >
+                        {m.breakthrough
+                          ? "Breakthrough"
+                          : m.blocker
+                          ? "Blocker Survived"
+                          : "Update"}
+                      </span>
+                    </div>
+                    <h3 className="font-serif font-bold text-lg">{m.title}</h3>
+                    {m.description && (
+                      <p className="text-sm text-muted-foreground">
+                        {m.description}
+                      </p>
+                    )}
+                    {m.screenshot_data && (
+                      <div className="text-xs font-mono text-muted-foreground mt-2 border border-border inline-block px-2 py-1">
+                        Exhibit Attached
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex flex-col items-end gap-1">
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="font-mono text-xs h-7 px-2"
+                        disabled={idx === 0 || updateMilestone.isPending}
+                        onClick={() => moveMilestone(idx, -1)}
+                        aria-label="Move earlier"
+                      >
+                        ↑
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="font-mono text-xs h-7 px-2"
+                        disabled={
+                          idx === ordered.length - 1 || updateMilestone.isPending
+                        }
+                        onClick={() => moveMilestone(idx, 1)}
+                        aria-label="Move later"
+                      >
+                        ↓
+                      </Button>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="font-mono text-xs h-7"
+                        onClick={() => startEdit(m)}
+                      >
+                        Amend
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10 font-mono text-xs h-7"
+                        onClick={() => {
+                          if (confirm("Redact this exhibit?"))
+                            deleteMilestone.mutate(m.id);
+                        }}
+                      >
+                        Redact
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="text-destructive hover:text-destructive hover:bg-destructive/10 font-mono text-xs"
-              onClick={() => deleteMilestone.mutate(m.id)}
-            >
-              Redact
-            </Button>
-          </div>
-        ))}
+          ));
+        })()}
         {(!project.milestones || project.milestones.length === 0) && (
           <div className="text-center py-10 border border-dashed border-border text-muted-foreground font-mono text-sm uppercase">
             No evidence filed yet.
