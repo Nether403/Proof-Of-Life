@@ -161,13 +161,33 @@ export default function EditProject() {
                 className="bg-card border-card-border"
               />
             </div>
-            
+
+            <div className="space-y-2">
+              <Label className="font-mono text-xs uppercase tracking-widest text-muted-foreground">Builder</Label>
+              <Input
+                value={localData?.builder_name || ''}
+                onChange={(e) => handleFieldChange('builder_name', e.target.value)}
+                className="bg-card border-card-border"
+                placeholder="Who is responsible for the resurrection?"
+              />
+            </div>
+
             <div className="space-y-2">
               <Label className="font-mono text-xs uppercase tracking-widest text-muted-foreground">One-Liner</Label>
               <Input 
                 value={localData?.one_liner || ''} 
                 onChange={(e) => handleFieldChange('one_liner', e.target.value)} 
                 className="bg-card border-card-border"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="font-mono text-xs uppercase tracking-widest text-muted-foreground">Starting State</Label>
+              <Textarea
+                value={localData?.starting_state || ''}
+                onChange={(e) => handleFieldChange('starting_state', e.target.value)}
+                className="bg-card border-card-border min-h-[100px]"
+                placeholder="What was the condition of the corpse on arrival?"
               />
             </div>
 
