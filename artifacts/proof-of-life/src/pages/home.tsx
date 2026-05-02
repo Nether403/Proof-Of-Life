@@ -81,7 +81,7 @@ export default function Home() {
                 size="default"
                 className="font-mono uppercase tracking-wider h-11 sm:w-40"
               >
-                Open Case
+                Open Editor
               </Button>
             </form>
           </div>
@@ -136,7 +136,7 @@ function HeroCopy() {
             size="lg"
             className="w-full sm:w-auto font-mono uppercase tracking-wider h-14 px-8 border-border hover:bg-muted"
           >
-            View Example
+            View Live Dossier
           </Button>
         </Link>
       </div>

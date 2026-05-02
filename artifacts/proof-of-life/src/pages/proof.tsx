@@ -13,6 +13,7 @@ import {
   localStorageKeyForProject,
   shareLinkForSlug,
   SEEDED_EXAMPLE_PATH,
+  SEEDED_EXAMPLE_SLUG,
   type Project,
 } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -21,17 +22,36 @@ import { Button } from "@/components/ui/button";
  * Builds the plain-text submission summary that gets copied when a builder
  * hits "Copy submission summary" — a paste-ready block they can drop into
  * a buildathon submission form, Discord post, or judging rubric.
+ *
+ * Always available: even if the AI briefing is empty, this falls back to
+ * a structured before/after + counts block so judges still get a useful
+ * paste.
  */
 function buildSubmissionSummary(project: Project, publicUrl: string): string {
+  const milestones = project.milestones ?? [];
+  const exhibits = milestones.length;
+  const breakthroughs = milestones.filter((m) => m.breakthrough).length;
+  const blockers = milestones.filter((m) => m.blocker).length;
   const lines: (string | null)[] = [
     project.title,
     project.builder_name ? `Filed by ${project.builder_name}` : null,
-    project.one_liner,
+    project.one_liner || null,
     "",
     `Public dossier: ${publicUrl}`,
   ];
   if (project.replit_url) lines.push(`Source: ${project.replit_url}`);
   if (project.demo_url) lines.push(`Live demo: ${project.demo_url}`);
+  lines.push(
+    "",
+    "BEFORE",
+    project.starting_state || "—",
+    "",
+    "AFTER",
+    project.current_state || "—",
+    "",
+    `EVIDENCE: ${exhibits} exhibits · ${breakthroughs} breakthroughs · ${blockers} blockers survived`,
+    "VERDICT: Alive",
+  );
   if (project.generated_summary) {
     lines.push("", "BRIEFING", project.generated_summary);
   }
@@ -149,11 +169,39 @@ export default function ProofPage() {
             </div>
             <div className="flex items-center gap-2 flex-wrap shrink-0">
               <CopyLinkButton value={publicUrl} label="Copy link" />
-              {project.generated_summary && (
-                <CopyLinkButton
-                  value={buildSubmissionSummary(project, publicUrl)}
-                  label="Copy submission summary"
-                />
+              <CopyLinkButton
+                value={buildSubmissionSummary(project, publicUrl)}
+                label="Copy submission summary"
+              />
+              {project.demo_url && (
+                <a
+                  href={project.demo_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="font-mono uppercase text-xs tracking-wider border-primary/40 text-primary hover:bg-primary/10"
+                  >
+                    Open App →
+                  </Button>
+                </a>
+              )}
+              {project.replit_url && (
+                <a
+                  href={project.replit_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="font-mono uppercase text-xs tracking-wider"
+                  >
+                    View Source →
+                  </Button>
+                </a>
               )}
             </div>
           </div>
@@ -180,9 +228,9 @@ export default function ProofPage() {
               hint="In the log"
             />
             <StatTile
-              label="Biggest break"
+              label="Key breakthrough"
               value={firstBreakthrough ? firstBreakthrough.title : "—"}
-              hint={firstBreakthrough ? "Breakthrough" : "Pending"}
+              hint={firstBreakthrough ? "First breakthrough" : "Pending"}
               className="col-span-2 sm:col-span-1"
             />
             <StatTile
@@ -209,6 +257,66 @@ export default function ProofPage() {
             </div>
           )}
         </header>
+
+        {/* Case Conclusion — above-the-fold delta summary so judges can
+            grasp the before/after, evidence counts, and verdict without
+            scrolling. */}
+        <section className="border border-primary/30 bg-primary/5 p-5 md:p-7 space-y-4 relative overflow-hidden">
+          <div
+            className="absolute -top-12 -right-8 w-48 h-48 bg-primary/10 blur-3xl rounded-full pointer-events-none"
+            aria-hidden="true"
+          />
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <h2 className="font-mono text-[10px] sm:text-xs tracking-widest text-primary uppercase">
+              Case Conclusion
+            </h2>
+            <span className="alive-pill">
+              <span className="alive-dot"></span>
+              Verdict: Alive
+            </span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+            <div className="space-y-1 min-w-0">
+              <div className="font-mono text-[9px] uppercase tracking-widest text-destructive/80">
+                Started with
+              </div>
+              <p className="font-serif text-sm md:text-base text-muted-foreground leading-snug line-clamp-3">
+                {project.starting_state || "—"}
+              </p>
+            </div>
+            <div className="space-y-1 min-w-0">
+              <div className="font-mono text-[9px] uppercase tracking-widest text-primary">
+                Ended with
+              </div>
+              <p className="font-serif text-sm md:text-base text-foreground leading-snug line-clamp-3">
+                {project.current_state || "—"}
+              </p>
+            </div>
+          </div>
+          <div className="font-mono text-[10px] sm:text-xs uppercase tracking-widest text-muted-foreground">
+            Evidence:{" "}
+            <span className="text-foreground">
+              {pad2(sortedMilestones.length)} exhibits
+            </span>
+            {" · "}
+            <span className="text-primary">
+              {pad2(sortedMilestones.filter((m) => m.breakthrough).length)}{" "}
+              breakthroughs
+            </span>
+            {" · "}
+            <span className="text-foreground">
+              {blockers.length === 0
+                ? "Clean run"
+                : `${pad2(blockers.length)} blockers survived`}
+            </span>
+          </div>
+          {project.slug === SEEDED_EXAMPLE_SLUG && (
+            <p className="font-serif text-xs sm:text-sm italic text-muted-foreground/90 border-t border-primary/20 pt-3">
+              This live dossier was generated by Proof of Life to document
+              the creation of Proof of Life itself.
+            </p>
+          )}
+        </section>
 
         {/* Before → After */}
         <section className="space-y-6">

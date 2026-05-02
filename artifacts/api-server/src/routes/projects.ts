@@ -13,6 +13,29 @@ const router: IRouter = Router();
 // SEEDED_EXAMPLE_SLUG constant in the proof-of-life frontend.
 const EXAMPLE_SLUG = "proof-of-life-builds-itself";
 
+// Seeded example projects whose edit_token is hardcoded in the public
+// repo. These are read-only — no mutation route is allowed to touch
+// them, even with a valid token. Keep in sync with seed.ts slugs.
+const LOCKED_SLUGS = new Set<string>([
+  "proof-of-life-builds-itself",
+  "alive-or-dead-the-deadwords-resurrection",
+]);
+
+async function rejectIfLocked(
+  res: Response,
+  projectId: number,
+): Promise<boolean> {
+  const [project] = await db
+    .select({ slug: projectsTable.slug })
+    .from(projectsTable)
+    .where(eq(projectsTable.id, projectId));
+  if (project && LOCKED_SLUGS.has(project.slug)) {
+    res.status(403).json({ error: "Seeded example projects are locked." });
+    return true;
+  }
+  return false;
+}
+
 // ----- helpers -----
 
 async function loadFullProject(projectId: number) {
@@ -202,6 +225,7 @@ router.patch("/projects/:id", async (req, res) => {
     return;
   }
   if (!(await requireEditToken(req, res, id))) return;
+  if (await rejectIfLocked(res, id)) return;
   const parsed = updateProjectSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid body", details: parsed.error.issues });
@@ -224,6 +248,7 @@ router.delete("/projects/:id", async (req, res) => {
     return;
   }
   if (!(await requireEditToken(req, res, id))) return;
+  if (await rejectIfLocked(res, id)) return;
   await db.delete(projectsTable).where(eq(projectsTable.id, id));
   res.json({ ok: true });
 });
@@ -237,6 +262,7 @@ router.post("/projects/:id/milestones", async (req, res) => {
     return;
   }
   if (!(await requireEditToken(req, res, id))) return;
+  if (await rejectIfLocked(res, id)) return;
   const parsed = milestoneSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid body", details: parsed.error.issues });
@@ -291,6 +317,7 @@ router.patch("/projects/:id/milestones/:mid", async (req, res) => {
     return;
   }
   if (!(await requireEditToken(req, res, id))) return;
+  if (await rejectIfLocked(res, id)) return;
   const parsed = milestoneUpdateSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid body", details: parsed.error.issues });
@@ -328,6 +355,7 @@ router.delete("/projects/:id/milestones/:mid", async (req, res) => {
     return;
   }
   if (!(await requireEditToken(req, res, id))) return;
+  if (await rejectIfLocked(res, id)) return;
   await db
     .delete(milestonesTable)
     .where(
@@ -345,6 +373,7 @@ router.post("/projects/:id/generate-summary", async (req, res) => {
     return;
   }
   if (!(await requireEditToken(req, res, id))) return;
+  if (await rejectIfLocked(res, id)) return;
   const project = await loadFullProject(id);
   if (!project) {
     res.status(404).json({ error: "Not found" });
@@ -389,6 +418,7 @@ router.post("/projects/:id/generate-demo-script", async (req, res) => {
     return;
   }
   if (!(await requireEditToken(req, res, id))) return;
+  if (await rejectIfLocked(res, id)) return;
   const project = await loadFullProject(id);
   if (!project) {
     res.status(404).json({ error: "Not found" });
