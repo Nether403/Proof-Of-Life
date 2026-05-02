@@ -282,15 +282,30 @@ export function shareLinkForSlug(slug: string): string {
 }
 
 /**
- * Slug of the seeded example case. Centralized so the home page,
- * 404 fallback, and not-found page all link to the same dossier
- * without duplicating the literal string. Must stay in sync with
- * the seed in artifacts/api-server/src/lib/seed.ts.
+ * Slug of the *featured* seeded example — the meta-case that documents
+ * the building of Proof of Life itself. Centralized so the home page
+ * preview, 404 fallback, and not-found page all link to the same
+ * dossier without duplicating the literal string. Must stay in sync
+ * with META_CASE_SLUG in artifacts/api-server/src/lib/seed.ts and
+ * EXAMPLE_SLUG in artifacts/api-server/src/routes/projects.ts.
  */
-export const SEEDED_EXAMPLE_SLUG =
-  "alive-or-dead-the-deadwords-resurrection";
+export const SEEDED_EXAMPLE_SLUG = "proof-of-life-builds-itself";
 
 export const SEEDED_EXAMPLE_PATH = `/p/${SEEDED_EXAMPLE_SLUG}`;
+
+/**
+ * Secondary seeded example (the polished fictional DeadWords
+ * walk-through). Kept reachable from the home page so visitors can
+ * compare two real, fully-populated case files. Must stay in sync
+ * with DEADWORDS_SLUG in artifacts/api-server/src/lib/seed.ts.
+ */
+export const SECONDARY_EXAMPLE_SLUG =
+  "alive-or-dead-the-deadwords-resurrection";
+
+export const SECONDARY_EXAMPLE_PATH = `/p/${SECONDARY_EXAMPLE_SLUG}`;
+
+export const SECONDARY_EXAMPLE_LABEL =
+  "DeadWords (a fictional walk-through)";
 
 export function localStorageKeyForProject(id: number): string {
   return `proof-of-life:edit-token:${id}`;

@@ -8,7 +8,10 @@ import { getAnthropic, AI_MODEL } from "../lib/ai";
 
 const router: IRouter = Router();
 
-const EXAMPLE_SLUG = "alive-or-dead-the-deadwords-resurrection";
+// Slug of the *featured* example surfaced by /api/projects/example.
+// Must stay in sync with META_CASE_SLUG in lib/seed.ts and the
+// SEEDED_EXAMPLE_SLUG constant in the proof-of-life frontend.
+const EXAMPLE_SLUG = "proof-of-life-builds-itself";
 
 // ----- helpers -----
 

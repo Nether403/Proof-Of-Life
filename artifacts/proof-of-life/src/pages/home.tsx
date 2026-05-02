@@ -6,7 +6,13 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useExampleProject } from "@/hooks/use-api";
 import { pad2 } from "@/components/dossier";
-import { SEEDED_EXAMPLE_PATH, type Project, type Milestone } from "@/lib/api";
+import {
+  SEEDED_EXAMPLE_PATH,
+  SECONDARY_EXAMPLE_PATH,
+  SECONDARY_EXAMPLE_LABEL,
+  type Project,
+  type Milestone,
+} from "@/lib/api";
 
 export default function Home() {
   const [, setLocation] = useLocation();
@@ -263,6 +269,18 @@ function DossierPreview({
           </span>
         </div>
       </Link>
+
+      {/* Secondary example: keeps the older fictional walk-through
+          discoverable without competing with the featured meta-case. */}
+      <div className="relative mt-3 text-center sm:text-right font-mono text-[10px] tracking-widest uppercase text-muted-foreground/80">
+        Also see:{" "}
+        <Link
+          href={SECONDARY_EXAMPLE_PATH}
+          className="text-muted-foreground hover:text-primary underline-offset-4 hover:underline transition-colors"
+        >
+          {SECONDARY_EXAMPLE_LABEL} →
+        </Link>
+      </div>
     </div>
   );
 }

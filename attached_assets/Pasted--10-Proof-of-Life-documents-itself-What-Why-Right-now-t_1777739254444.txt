@@ -1,0 +1,28 @@
+#10 - Proof of Life documents itself
+What & Why
+Right now the only example dossier on the landing page is a fictional one ("DeadWords"). The user wants the product to be its own live example: a case file that documents how Proof of Life itself went from a one-line buildathon idea to the working app a visitor is looking at right now.
+
+This makes the front door of the site a recursive proof of the thesis — "the dossier you're previewing was built by the same tool you're about to use" — and gives judges a second, real reference case to compare against the polished fictional one.
+
+Done looks like
+Visiting / shows the new self-referential dossier preview in the hero (left-column copy unchanged), and the "View Example" button opens the full Proof-of-Life-builds-itself dossier.
+The full dossier reads like a real case file: title, builder, before/ after that contrasts an empty repo with the live app, six well-paced milestones (mix of breakthroughs, one blocker survived, and a closer), at least three milestones have a screenshot evidence panel, AI-style summary and demo script are filled in.
+Milestone copy mirrors the actual project history (initial scaffold, first persisted project, AI summary integration, dark-cabinet polish, cinematic landing, and "it now documents itself"), so an attentive reader can see the meta-loop.
+The existing fictional DeadWords example is still seeded and reachable at its current slug — no share link breaks. A small, tasteful "Also see: a second worked example" link from the home page points to it.
+Server still seeds idempotently on boot; restarting the API does not duplicate or drift either example.
+Mobile + desktop layouts of the home and proof pages still look correct; no visual regression on the existing dossier UI.
+Out of scope
+Real PNG/JPG screenshots, file uploads, or object storage (already covered by Tasks #2 and #7). Use inline SVG data URLs the same way the existing example does.
+A general "featured project" admin UI, multi-example carousel, or any schema change to mark projects as featured. The featured example stays selected by a single hardcoded slug, just like today.
+Editing the meta-case from the in-app editor in production. The seed is the source of truth and is rewritten on every server boot.
+Touching unrelated proposed work (Tasks #2, #3, #4, #6, #7, #8).
+Steps
+Author meta-case content in the seed. Add a second seeded project alongside DeadWords with title, builder name, one-liner, before/after states, AI summary, demo script, and ~6 milestones whose timestamps, types, and breakthrough/blocker tags trace the actual build arc (scaffold → first persisted project → AI summary wired up → dark- cabinet polish → cinematic landing → "it documents itself"). Keep the existing DeadWords seed exactly as it is.
+Draw 3-4 SVG evidence screenshots in the same style as the existing DeadWords SVGs, depicting recognizable Proof of Life screens (e.g. the empty /new form, a milestone card in the dark dossier, the cinematic landing hero). Attach them to the most demo-worthy milestones.
+Make the meta-case the featured example. Update the seed module so both projects are seeded idempotently (existing project gets updated in place, new one inserted), and switch the EXAMPLE_SLUG used by /api/projects/example and the frontend SEEDED_EXAMPLE_SLUG/SEEDED_EXAMPLE_PATH constants to the new meta-case slug. Confirm the server's startup seed call still covers both projects.
+Surface the secondary example. Add a small, low-weight "Also see: " link on the home page (e.g. inside the secondary band beside the resume form, or as a one-line caption under the dossier preview) so the older fictional example stays discoverable without competing with the meta-case.
+Verify end to end. Restart the API, confirm both projects load, the home page hero now previews the meta-case, "View Example" routes to it, the secondary link routes to DeadWords, share links to the old DeadWords slug still work, and the e2e test (or a quick adapted variant) still passes. Capture a desktop and mobile screenshot.
+Architectural constraints
+Keep the seed idempotent and safe to run on every boot: existing rows are updated in place by slug, milestones for that project are fully replaced, and pinned slug + edit_token values must not change for either project.
+Continue using inline SVG data URLs for screenshot evidence — do not introduce binary uploads or object storage in this task.
+No database schema changes. The featured example is selected by a single hardcoded slug shared between server and frontend.
