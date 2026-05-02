@@ -11,6 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { CaseEmpty, CopyLinkButton } from "@/components/dossier";
 
 type EditableField = keyof UpdateProjectBody;
 type EditableValue = string | boolean;
@@ -136,23 +137,31 @@ export default function EditProject() {
         </div>
 
         {localData?.published && (
-          <div className="bg-primary/10 border border-primary/30 p-6 flex flex-col items-center justify-center space-y-4">
-            <div className="font-mono text-sm tracking-widest text-primary uppercase">
+          <div className="bg-primary/10 border border-primary/30 p-5 md:p-6 flex flex-col items-center justify-center space-y-4">
+            <div className="font-mono text-xs sm:text-sm tracking-widest text-primary uppercase text-center">
               Case File is Public
             </div>
-            <div className="flex items-center gap-2 w-full max-w-md">
-              <Input readOnly value={publicUrl} className="font-mono text-xs bg-background" />
-              <Button onClick={() => {
-                navigator.clipboard.writeText(publicUrl);
-                toast({ title: "Copied to clipboard" });
-              }} variant="secondary" className="font-mono uppercase text-xs">Copy</Button>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full max-w-md">
+              <Input
+                readOnly
+                value={publicUrl}
+                className="font-mono text-xs bg-background min-w-0 flex-1"
+                onFocus={(e) => e.currentTarget.select()}
+              />
+              <CopyLinkButton
+                value={publicUrl}
+                label="Copy"
+                variant="secondary"
+                className="shrink-0 sm:w-auto"
+                onCopied={() => toast({ title: "Copied to clipboard" })}
+              />
             </div>
-            <div className="flex gap-4">
-              <Link href={`/p/${project.slug}`}>
-                <Button variant="outline" className="font-mono uppercase text-xs border-primary/50 text-primary hover:bg-primary/20">View Dossier</Button>
+            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+              <Link href={`/p/${project.slug}`} className="w-full sm:w-auto">
+                <Button variant="outline" className="w-full font-mono uppercase text-xs border-primary/50 text-primary hover:bg-primary/20">View Dossier</Button>
               </Link>
-              <Link href={`/card/${project.slug}`}>
-                <Button variant="outline" className="font-mono uppercase text-xs border-primary/50 text-primary hover:bg-primary/20">View Card</Button>
+              <Link href={`/card/${project.slug}`} className="w-full sm:w-auto">
+                <Button variant="outline" className="w-full font-mono uppercase text-xs border-primary/50 text-primary hover:bg-primary/20">View Card</Button>
               </Link>
             </div>
           </div>
@@ -752,9 +761,20 @@ function MilestoneManager({
           });
         })()}
         {(!project.milestones || project.milestones.length === 0) && (
-          <div className="text-center py-10 border border-dashed border-border text-muted-foreground font-mono text-sm uppercase">
-            No evidence filed yet.
-          </div>
+          <CaseEmpty
+            label="Empty Evidence Log"
+            message="Nothing has been filed yet. Every breakthrough, blocker, and update you record builds the case for proof of life."
+            cta={
+              <Button
+                onClick={() => setIsAdding(true)}
+                variant="outline"
+                size="sm"
+                className="font-mono uppercase text-xs border-primary/40 text-primary hover:bg-primary/10"
+              >
+                File your first exhibit →
+              </Button>
+            }
+          />
         )}
       </div>
 

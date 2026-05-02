@@ -207,3 +207,30 @@
     transform: translateY(0);
   }
 }
+
+.timeline-dot-breakthrough {
+  background-color: hsl(var(--primary));
+  box-shadow: 0 0 0 3px hsl(var(--background)), 0 0 14px hsl(var(--primary) / 0.55);
+}
+.timeline-dot-blocker {
+  background-color: hsl(var(--destructive));
+  box-shadow: 0 0 0 3px hsl(var(--background));
+}
+.timeline-dot-update {
+  background-color: hsl(var(--muted-foreground));
+  box-shadow: 0 0 0 3px hsl(var(--background));
+}
+
+.briefing-lede {
+  @apply font-serif text-xl md:text-2xl leading-snug text-foreground italic;
+}
+
+.script-quote::before {
+  content: "\201C"; /* left double quote */
+  display: block;
+  font-family: var(--app-font-serif);
+  font-size: 4rem;
+  line-height: 0.8;
+  color: hsl(var(--primary) / 0.4);
+  margin-bottom: 0.25rem;
+}
