@@ -11,7 +11,7 @@ export default function Home() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [editUrl, setEditUrl] = useState("");
-  const { data: example } = useExampleProject();
+  const { data: example, isError: exampleError } = useExampleProject();
 
   const handleResume = (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,16 +76,31 @@ export default function Home() {
                   File New Evidence
                 </Button>
               </Link>
-              {example && (
+              {example ? (
                 <Link href={`/p/${example.slug}`} className="block w-full">
                   <Button
                     variant="outline"
                     size="lg"
                     className="w-full font-mono uppercase tracking-wider h-14 border-border hover:bg-muted"
                   >
-                    See Example Case
+                    View Example
                   </Button>
                 </Link>
+              ) : exampleError ? (
+                // Distinguish "load failed" from "still loading" so the
+                // landing page can't get stuck in a perpetual skeleton if
+                // the example endpoint is down.
+                <div className="w-full h-14 border border-dashed border-destructive/40 bg-destructive/5 flex items-center justify-center font-mono text-[10px] uppercase tracking-widest text-destructive/80">
+                  Example unavailable
+                </div>
+              ) : (
+                // Skeleton so the layout is stable while the example loads;
+                // matches the height of the real button so the page never
+                // jumps once data arrives.
+                <div
+                  aria-hidden="true"
+                  className="w-full h-14 border border-dashed border-border/60 bg-card/30 animate-pulse"
+                />
               )}
             </div>
           </div>

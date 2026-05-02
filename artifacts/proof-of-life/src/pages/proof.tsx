@@ -12,8 +12,30 @@ import {
 import {
   localStorageKeyForProject,
   shareLinkForSlug,
+  type Project,
 } from "@/lib/api";
 import { Button } from "@/components/ui/button";
+
+/**
+ * Builds the plain-text submission summary that gets copied when a builder
+ * hits "Copy submission summary" — a paste-ready block they can drop into
+ * a buildathon submission form, Discord post, or judging rubric.
+ */
+function buildSubmissionSummary(project: Project, publicUrl: string): string {
+  const lines: (string | null)[] = [
+    project.title,
+    project.builder_name ? `Filed by ${project.builder_name}` : null,
+    project.one_liner,
+    "",
+    `Public dossier: ${publicUrl}`,
+  ];
+  if (project.replit_url) lines.push(`Source: ${project.replit_url}`);
+  if (project.demo_url) lines.push(`Live demo: ${project.demo_url}`);
+  if (project.generated_summary) {
+    lines.push("", "BRIEFING", project.generated_summary);
+  }
+  return lines.filter((l): l is string => l !== null).join("\n");
+}
 
 export default function ProofPage() {
   const [, params] = useRoute("/p/:slug");
@@ -126,6 +148,12 @@ export default function ProofPage() {
             </div>
             <div className="flex items-center gap-2 flex-wrap shrink-0">
               <CopyLinkButton value={publicUrl} label="Copy link" />
+              {project.generated_summary && (
+                <CopyLinkButton
+                  value={buildSubmissionSummary(project, publicUrl)}
+                  label="Copy submission summary"
+                />
+              )}
             </div>
           </div>
 
@@ -463,7 +491,15 @@ export default function ProofPage() {
         {/* Judge Briefing & Demo Script */}
         <section className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 border-t border-border pt-12">
           <div className="space-y-4 min-w-0">
-            <h2 className="redaction-bar text-xs">Judge Briefing</h2>
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <h2 className="redaction-bar text-xs">Judge Briefing</h2>
+              {project.generated_summary && (
+                <CopyLinkButton
+                  value={project.generated_summary}
+                  label="Copy briefing"
+                />
+              )}
+            </div>
             {project.generated_summary ? (
               <BriefingCard text={project.generated_summary} />
             ) : (
@@ -488,7 +524,15 @@ export default function ProofPage() {
           </div>
 
           <div className="space-y-4 min-w-0">
-            <h2 className="redaction-bar text-xs">Demo Script</h2>
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <h2 className="redaction-bar text-xs">Demo Script</h2>
+              {project.generated_demo_script && (
+                <CopyLinkButton
+                  value={project.generated_demo_script}
+                  label="Copy demo script"
+                />
+              )}
+            </div>
             {project.generated_demo_script ? (
               <ScriptCard text={project.generated_demo_script} />
             ) : (

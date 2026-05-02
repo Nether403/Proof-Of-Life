@@ -120,6 +120,9 @@ const SVG_TWO_READERS = `
 </svg>
 `;
 
+// Six demo-grade milestones, tuned for a 90-second walk-through: one setup
+// beat, one blocker survived, three breakthroughs (each with a screenshot),
+// and a closer with the most emotionally resonant moment of the sprint.
 const SEED_MILESTONES: SeedMilestone[] = [
   {
     hoursBeforeNow: 21.5,
@@ -160,15 +163,6 @@ const SEED_MILESTONES: SeedMilestone[] = [
     screenshotSvg: SVG_AUTH_REWRITE,
   },
   {
-    hoursBeforeNow: 12.25,
-    type: "blocker",
-    title: "Lost an hour to a Postgres collation mismatch",
-    description:
-      "Production dump used en_US.UTF-8, dev container used C.UTF-8. Indexes were silently broken. Rebuilt with the right collation, tests green again.",
-    blocker: true,
-    breakthrough: false,
-  },
-  {
     hoursBeforeNow: 8,
     type: "breakthrough",
     title: "Public reading room ships",
@@ -188,18 +182,9 @@ const SEED_MILESTONES: SeedMilestone[] = [
     breakthrough: false,
     screenshotSvg: SVG_TWO_READERS,
   },
-  {
-    hoursBeforeNow: 0.5,
-    type: "milestone",
-    title: "Filed evidence, locked the case",
-    description:
-      "Wrote the briefing. Recorded a screen capture for the demo. Project is alive, indexed, and reachable from a real URL.",
-    blocker: false,
-    breakthrough: false,
-  },
 ];
 
-const EXAMPLE_GENERATED_SUMMARY = `In 24 hours, an abandoned poetry archive went from a project that couldn't boot to a public reading room with 412 recovered poems and two readers logged in. The corpse was a two-year-old Node app with crashing migrations, an unmaintained auth library, and a corrupted database dump. The autopsy turned into a resurrection in three moves: backfill the NULL author rows that broke every migration, rip out the dead session library and replace it with magic-link auth, and ship a public /room view that lets anyone read the archive without an account. Along the way it survived two blockers — a NULL-row migration crash and a Postgres collation mismatch that silently invalidated every index. The proof is concrete: poem #1 renders, /room loads under 300ms, and two outside readers signed in tonight without any hand-holding.`;
+const EXAMPLE_GENERATED_SUMMARY = `In 24 hours, an abandoned poetry archive went from a project that couldn't boot to a public reading room with 412 recovered poems and two readers logged in. The corpse was a two-year-old Node app with crashing migrations, an unmaintained auth library, and a corrupted database dump. The autopsy turned into a resurrection in three moves: backfill the NULL author rows that broke every migration, rip out the dead session library and replace it with magic-link auth, and ship a public /room view that lets anyone read the archive without an account. The hardest blocker was a migration crash traced back to 38 NULL author rows from a 2023 import bug — once that was patched, every downstream fix came faster. The proof is concrete: poem #1 renders, /room loads under 300ms, and two outside readers signed in tonight without any hand-holding.`;
 
 const EXAMPLE_GENERATED_DEMO_SCRIPT = `This is DeadWords. Two days ago it had been dead for fourteen months. Migrations crashed on boot. Login returned a five-hundred. Nobody knew if the four hundred poems in the dump still existed.
 
