@@ -323,6 +323,17 @@ function MilestoneManager({
   const deleteMilestone = useDeleteMilestone(project.id, token);
   const updateMilestone = useUpdateMilestone(project.id, token);
   const { toast } = useToast();
+  // Surface every server-side rejection (size cap, validation, auth, network)
+  // to the user so failures never silently disappear.
+  const showMutationError = (action: string) => (err: unknown) => {
+    const description =
+      err instanceof Error && err.message ? err.message : "Unknown error";
+    toast({
+      title: `Could not ${action}`,
+      description,
+      variant: "destructive",
+    });
+  };
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editDraft, setEditDraft] = useState<MilestoneDraft | null>(null);
 
@@ -369,6 +380,7 @@ function MilestoneManager({
           setIsAdding(false);
           setNewMilestone(emptyDraft());
         },
+        onError: showMutationError("file evidence"),
       },
     );
   };
@@ -454,14 +466,14 @@ function MilestoneManager({
             if (swapWith < 0 || swapWith >= ordered.length) return;
             const a = ordered[idx];
             const b = ordered[swapWith];
-            updateMilestone.mutate({
-              milestoneId: a.id,
-              body: { sort_order: b.sort_order },
-            });
-            updateMilestone.mutate({
-              milestoneId: b.id,
-              body: { sort_order: a.sort_order },
-            });
+            updateMilestone.mutate(
+              { milestoneId: a.id, body: { sort_order: b.sort_order } },
+              { onError: showMutationError("reorder evidence") },
+            );
+            updateMilestone.mutate(
+              { milestoneId: b.id, body: { sort_order: a.sort_order } },
+              { onError: showMutationError("reorder evidence") },
+            );
           };
           const startEdit = (m: Milestone) => {
             const kind: MilestoneTypeKind = m.breakthrough
@@ -499,6 +511,7 @@ function MilestoneManager({
                   setEditingId(null);
                   setEditDraft(null);
                 },
+                onError: showMutationError("amend evidence"),
               },
             );
           };
@@ -654,7 +667,9 @@ function MilestoneManager({
                         className="text-destructive hover:text-destructive hover:bg-destructive/10 font-mono text-xs h-7"
                         onClick={() => {
                           if (confirm("Redact this exhibit?"))
-                            deleteMilestone.mutate(m.id);
+                            deleteMilestone.mutate(m.id, {
+                              onError: showMutationError("redact evidence"),
+                            });
                         }}
                       >
                         Redact
