@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import {
   getExampleProject,
   getProjectBySlug,
@@ -11,46 +11,54 @@ import {
   deleteMilestone,
   generateSummary,
   generateDemoScript,
-  CreateProjectBody,
-  UpdateProjectBody,
-  MilestoneInput,
+  ApiError,
+  type Project,
+  type ProjectWithToken,
+  type CreateProjectBody,
+  type UpdateProjectBody,
+  type MilestoneInput,
 } from "@/lib/api";
 
+function statusOf(error: unknown): number | undefined {
+  return error instanceof ApiError ? error.status : undefined;
+}
+
 export function useExampleProject() {
-  return useQuery({
+  return useQuery<Project, ApiError>({
     queryKey: ["project", "example"],
     queryFn: getExampleProject,
   });
 }
 
 export function useProjectBySlug(slug: string) {
-  return useQuery({
+  return useQuery<Project, ApiError>({
     queryKey: ["project", "slug", slug],
     queryFn: () => getProjectBySlug(slug),
     enabled: !!slug,
-    retry: (failureCount, error: any) => {
-      if (error?.status === 404) return false;
+    retry: (failureCount, error) => {
+      if (statusOf(error) === 404) return false;
       return failureCount < 3;
-    }
+    },
   });
 }
 
 export function useProjectForEdit(id: number | null, token: string | null) {
-  return useQuery({
+  return useQuery<ProjectWithToken, ApiError>({
     queryKey: ["project", "edit", id],
     queryFn: () => getProjectForEdit(id!, token!),
     enabled: !!id && !!token,
-    retry: (failureCount, error: any) => {
-      if (error?.status === 401 || error?.status === 404) return false;
+    retry: (failureCount, error) => {
+      const s = statusOf(error);
+      if (s === 401 || s === 404) return false;
       return failureCount < 3;
-    }
+    },
   });
 }
 
 export function useCreateProject() {
   const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (body: CreateProjectBody) => createProject(body),
+  return useMutation<ProjectWithToken, ApiError, CreateProjectBody>({
+    mutationFn: (body) => createProject(body),
     onSuccess: (data) => {
       queryClient.setQueryData(["project", "edit", data.id], data);
     },
@@ -59,8 +67,8 @@ export function useCreateProject() {
 
 export function useUpdateProject(id: number, token: string) {
   const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (body: UpdateProjectBody) => updateProject(id, token, body),
+  return useMutation<ProjectWithToken, ApiError, UpdateProjectBody>({
+    mutationFn: (body) => updateProject(id, token, body),
     onSuccess: (data) => {
       queryClient.setQueryData(["project", "edit", id], data);
       queryClient.invalidateQueries({ queryKey: ["project", "slug", data.slug] });
@@ -68,13 +76,8 @@ export function useUpdateProject(id: number, token: string) {
   });
 }
 
-function invalidateProjectViews(
-  queryClient: ReturnType<typeof useQueryClient>,
-  projectId: number,
-) {
+function invalidateProjectViews(queryClient: QueryClient, projectId: number) {
   queryClient.invalidateQueries({ queryKey: ["project", "edit", projectId] });
-  // Invalidate every cached public-by-slug query so the public proof page
-  // re-fetches after timeline/screenshot/publish changes.
   queryClient.invalidateQueries({
     predicate: (q) => q.queryKey[0] === "project" && q.queryKey[1] === "slug",
   });
@@ -83,16 +86,20 @@ function invalidateProjectViews(
 
 export function useCreateMilestone(projectId: number, token: string) {
   const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (body: MilestoneInput) => createMilestone(projectId, token, body),
+  return useMutation<unknown, ApiError, MilestoneInput>({
+    mutationFn: (body) => createMilestone(projectId, token, body),
     onSuccess: () => invalidateProjectViews(queryClient, projectId),
   });
 }
 
 export function useUpdateMilestone(projectId: number, token: string) {
   const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ milestoneId, body }: { milestoneId: number; body: Partial<MilestoneInput> }) =>
+  return useMutation<
+    unknown,
+    ApiError,
+    { milestoneId: number; body: Partial<MilestoneInput> }
+  >({
+    mutationFn: ({ milestoneId, body }) =>
       updateMilestone(projectId, milestoneId, token, body),
     onSuccess: () => invalidateProjectViews(queryClient, projectId),
   });
@@ -100,34 +107,44 @@ export function useUpdateMilestone(projectId: number, token: string) {
 
 export function useDeleteMilestone(projectId: number, token: string) {
   const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (milestoneId: number) => deleteMilestone(projectId, milestoneId, token),
+  return useMutation<unknown, ApiError, number>({
+    mutationFn: (milestoneId) => deleteMilestone(projectId, milestoneId, token),
     onSuccess: () => invalidateProjectViews(queryClient, projectId),
+  });
+}
+
+export function useDeleteProject(id: number, token: string) {
+  return useMutation<{ ok: true }, ApiError, void>({
+    mutationFn: () => deleteProject(id, token),
   });
 }
 
 export function useGenerateSummary(projectId: number, token: string) {
   const queryClient = useQueryClient();
-  return useMutation({
+  return useMutation<{ generated_summary: string }, ApiError, void>({
     mutationFn: () => generateSummary(projectId, token),
     onSuccess: (data) => {
-      queryClient.setQueryData(["project", "edit", projectId], (old: any) => {
-        if (!old) return old;
-        return { ...old, generated_summary: data.generated_summary };
-      });
+      queryClient.setQueryData<ProjectWithToken | undefined>(
+        ["project", "edit", projectId],
+        (old) =>
+          old ? { ...old, generated_summary: data.generated_summary } : old,
+      );
     },
   });
 }
 
 export function useGenerateDemoScript(projectId: number, token: string) {
   const queryClient = useQueryClient();
-  return useMutation({
+  return useMutation<{ generated_demo_script: string }, ApiError, void>({
     mutationFn: () => generateDemoScript(projectId, token),
     onSuccess: (data) => {
-      queryClient.setQueryData(["project", "edit", projectId], (old: any) => {
-        if (!old) return old;
-        return { ...old, generated_demo_script: data.generated_demo_script };
-      });
+      queryClient.setQueryData<ProjectWithToken | undefined>(
+        ["project", "edit", projectId],
+        (old) =>
+          old
+            ? { ...old, generated_demo_script: data.generated_demo_script }
+            : old,
+      );
     },
   });
 }

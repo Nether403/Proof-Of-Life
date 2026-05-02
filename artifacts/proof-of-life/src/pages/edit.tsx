@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useRoute, useLocation, Link } from "wouter";
 import { Layout, DossierSkeleton } from "@/components/layout";
 import { useProjectForEdit, useUpdateProject, useCreateMilestone, useDeleteMilestone, useUpdateMilestone, useGenerateSummary, useGenerateDemoScript } from "@/hooks/use-api";
-import { localStorageKeyForProject, fileToDataUrl, SCREENSHOT_MAX_BYTES, SCREENSHOT_ALLOWED_TYPES, shareLinkForSlug } from "@/lib/api";
+import { localStorageKeyForProject, fileToDataUrl, SCREENSHOT_MAX_BYTES, SCREENSHOT_ALLOWED_TYPES, shareLinkForSlug, type Milestone, type ProjectWithToken, type UpdateProjectBody } from "@/lib/api";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,9 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Milestone } from "@/lib/api";
+
+type EditableField = keyof UpdateProjectBody;
+type EditableValue = string | boolean;
 
 export default function EditProject() {
   const [, params] = useRoute("/edit/:id");
@@ -28,13 +30,27 @@ export default function EditProject() {
   
   const { toast } = useToast();
 
-  const [localData, setLocalData] = useState<any>(null);
+  const [localData, setLocalData] = useState<ProjectWithToken | null>(null);
   const saveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dirtyFields = useRef<Set<EditableField>>(new Set());
 
+  // Hydrate local form state from server data. Server-driven fields the user
+  // hasn't edited locally (e.g. AI-generated briefing or demo script) are
+  // synced through on every refetch so the UI reflects the latest server state
+  // immediately. Fields the user is actively editing are preserved.
   useEffect(() => {
-    if (project && !localData) {
-      setLocalData(project);
-    }
+    if (!project) return;
+    setLocalData((prev) => {
+      if (!prev) return project;
+      const merged = { ...prev } as unknown as Record<string, unknown>;
+      const incoming = project as unknown as Record<string, unknown>;
+      for (const k of Object.keys(incoming)) {
+        if (!dirtyFields.current.has(k as EditableField)) {
+          merged[k] = incoming[k];
+        }
+      }
+      return merged as unknown as ProjectWithToken;
+    });
   }, [project]);
 
   if (!id || !token) {
@@ -50,12 +66,22 @@ export default function EditProject() {
   if (isLoading) return <Layout><DossierSkeleton /></Layout>;
   if (isError || !project) return <Layout><div className="text-center py-20 text-destructive font-mono uppercase">Case file not found or access denied.</div></Layout>;
 
-  const handleFieldChange = (field: string, value: any) => {
-    setLocalData((prev: any) => ({ ...prev, [field]: value }));
-    
+  const handleFieldChange = (field: EditableField, value: EditableValue) => {
+    dirtyFields.current.add(field);
+    setLocalData((prev) =>
+      prev ? ({ ...prev, [field]: value } as ProjectWithToken) : prev,
+    );
+
     if (saveTimeout.current) clearTimeout(saveTimeout.current);
     saveTimeout.current = setTimeout(() => {
-      updateProject.mutate({ [field]: value });
+      updateProject.mutate(
+        { [field]: value } as UpdateProjectBody,
+        {
+          onSettled: () => {
+            dirtyFields.current.delete(field);
+          },
+        },
+      );
     }, 1000);
   };
 
@@ -236,22 +262,42 @@ export default function EditProject() {
   );
 }
 
-function MilestoneManager({ project, token }: { project: any; token: string }) {
+type MilestoneTypeKind = "update" | "breakthrough" | "blocker";
+
+interface MilestoneDraft {
+  title: string;
+  description: string;
+  type: MilestoneTypeKind;
+  occurred_at: string;
+  screenshot_data: string | null;
+}
+
+function emptyDraft(): MilestoneDraft {
+  return {
+    title: "",
+    description: "",
+    type: "update",
+    occurred_at: new Date().toISOString().slice(0, 16),
+    screenshot_data: null,
+  };
+}
+
+function MilestoneManager({
+  project,
+  token,
+}: {
+  project: ProjectWithToken;
+  token: string;
+}) {
   const createMilestone = useCreateMilestone(project.id, token);
   const deleteMilestone = useDeleteMilestone(project.id, token);
   const updateMilestone = useUpdateMilestone(project.id, token);
   const { toast } = useToast();
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [editDraft, setEditDraft] = useState<any>(null);
-  
+  const [editDraft, setEditDraft] = useState<MilestoneDraft | null>(null);
+
   const [isAdding, setIsAdding] = useState(false);
-  const [newMilestone, setNewMilestone] = useState<any>({
-    title: "",
-    description: "",
-    type: "update",
-    occurred_at: new Date().toISOString().slice(0, 16),
-    screenshot_data: null
-  });
+  const [newMilestone, setNewMilestone] = useState<MilestoneDraft>(emptyDraft());
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -269,7 +315,7 @@ function MilestoneManager({ project, token }: { project: any; token: string }) {
     try {
       const dataUrl = await fileToDataUrl(file);
       setNewMilestone({ ...newMilestone, screenshot_data: dataUrl });
-    } catch (err) {
+    } catch {
       toast({ title: "Error processing image", variant: "destructive" });
     }
   };
@@ -277,24 +323,24 @@ function MilestoneManager({ project, token }: { project: any; token: string }) {
   const handleAdd = () => {
     const isBreakthrough = newMilestone.type === "breakthrough";
     const isBlocker = newMilestone.type === "blocker";
-    
-    createMilestone.mutate({
-      ...newMilestone,
-      breakthrough: isBreakthrough,
-      blocker: isBlocker,
-      occurred_at: new Date(newMilestone.occurred_at).toISOString()
-    }, {
-      onSuccess: () => {
-        setIsAdding(false);
-        setNewMilestone({
-          title: "",
-          description: "",
-          type: "update",
-          occurred_at: new Date().toISOString().slice(0, 16),
-          screenshot_data: null
-        });
-      }
-    });
+
+    createMilestone.mutate(
+      {
+        title: newMilestone.title,
+        description: newMilestone.description,
+        type: newMilestone.type,
+        breakthrough: isBreakthrough,
+        blocker: isBlocker,
+        occurred_at: new Date(newMilestone.occurred_at).toISOString(),
+        screenshot_data: newMilestone.screenshot_data,
+      },
+      {
+        onSuccess: () => {
+          setIsAdding(false);
+          setNewMilestone(emptyDraft());
+        },
+      },
+    );
   };
 
   return (
@@ -319,7 +365,7 @@ function MilestoneManager({ project, token }: { project: any; token: string }) {
             </div>
             <div className="space-y-2">
               <Label className="font-mono text-xs uppercase tracking-widest text-muted-foreground">Type</Label>
-              <Select value={newMilestone.type} onValueChange={v => setNewMilestone({...newMilestone, type: v})}>
+              <Select value={newMilestone.type} onValueChange={v => setNewMilestone({...newMilestone, type: v as MilestoneTypeKind})}>
                 <SelectTrigger className="bg-background border-border">
                   <SelectValue />
                 </SelectTrigger>
@@ -370,8 +416,8 @@ function MilestoneManager({ project, token }: { project: any; token: string }) {
 
       <div className="space-y-4">
         {(() => {
-          const ordered = [...(project.milestones ?? [])].sort(
-            (a: any, b: any) => a.sort_order - b.sort_order,
+          const ordered: Milestone[] = [...(project.milestones ?? [])].sort(
+            (a, b) => a.sort_order - b.sort_order,
           );
           const moveMilestone = (idx: number, dir: -1 | 1) => {
             const swapWith = idx + dir;
@@ -387,20 +433,23 @@ function MilestoneManager({ project, token }: { project: any; token: string }) {
               body: { sort_order: a.sort_order },
             });
           };
-          const startEdit = (m: any) => {
+          const startEdit = (m: Milestone) => {
+            const kind: MilestoneTypeKind = m.breakthrough
+              ? "breakthrough"
+              : m.blocker
+              ? "blocker"
+              : "update";
             setEditingId(m.id);
             setEditDraft({
               title: m.title,
               description: m.description ?? "",
-              type: m.breakthrough
-                ? "breakthrough"
-                : m.blocker
-                ? "blocker"
-                : m.type ?? "update",
+              type: kind,
               occurred_at: new Date(m.occurred_at).toISOString().slice(0, 16),
+              screenshot_data: m.screenshot_data,
             });
           };
           const saveEdit = (id: number) => {
+            if (!editDraft) return;
             const isBreakthrough = editDraft.type === "breakthrough";
             const isBlocker = editDraft.type === "blocker";
             updateMilestone.mutate(
@@ -423,25 +472,27 @@ function MilestoneManager({ project, token }: { project: any; token: string }) {
               },
             );
           };
-          return ordered.map((m: any, idx: number) => (
+          return ordered.map((m, idx) => {
+            const draft = editingId === m.id ? editDraft : null;
+            return (
             <div
               key={m.id}
               className="border border-border p-4 flex flex-col gap-3"
             >
-              {editingId === m.id ? (
+              {draft ? (
                 <div className="space-y-3">
                   <Input
-                    value={editDraft.title}
+                    value={draft.title}
                     onChange={(e) =>
-                      setEditDraft({ ...editDraft, title: e.target.value })
+                      setEditDraft({ ...draft, title: e.target.value })
                     }
                     className="bg-background border-border"
                   />
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <Select
-                      value={editDraft.type}
+                      value={draft.type}
                       onValueChange={(v) =>
-                        setEditDraft({ ...editDraft, type: v })
+                        setEditDraft({ ...draft, type: v as MilestoneTypeKind })
                       }
                     >
                       <SelectTrigger className="bg-background border-border">
@@ -455,10 +506,10 @@ function MilestoneManager({ project, token }: { project: any; token: string }) {
                     </Select>
                     <Input
                       type="datetime-local"
-                      value={editDraft.occurred_at}
+                      value={draft.occurred_at}
                       onChange={(e) =>
                         setEditDraft({
-                          ...editDraft,
+                          ...draft,
                           occurred_at: e.target.value,
                         })
                       }
@@ -466,10 +517,10 @@ function MilestoneManager({ project, token }: { project: any; token: string }) {
                     />
                   </div>
                   <Textarea
-                    value={editDraft.description}
+                    value={draft.description}
                     onChange={(e) =>
                       setEditDraft({
-                        ...editDraft,
+                        ...draft,
                         description: e.target.value,
                       })
                     }
@@ -478,7 +529,7 @@ function MilestoneManager({ project, token }: { project: any; token: string }) {
                   <div className="flex gap-2">
                     <Button
                       onClick={() => saveEdit(m.id)}
-                      disabled={!editDraft.title || updateMilestone.isPending}
+                      disabled={!draft.title || updateMilestone.isPending}
                       className="font-mono uppercase text-xs"
                       size="sm"
                     >
@@ -583,7 +634,8 @@ function MilestoneManager({ project, token }: { project: any; token: string }) {
                 </div>
               )}
             </div>
-          ));
+            );
+          });
         })()}
         {(!project.milestones || project.milestones.length === 0) && (
           <div className="text-center py-10 border border-dashed border-border text-muted-foreground font-mono text-sm uppercase">
