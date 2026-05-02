@@ -1,0 +1,51 @@
+Build a full-stack web app called “Proof of Life”.
+
+Concept:
+Proof of Life helps builders in a 24-hour buildathon turn their messy sprint into a public, judge-ready proof page. Users create a project, add milestones, screenshots, blockers, and breakthroughs, then publish a beautiful page showing before/after progress, a timeline, a judge summary, and a 60-second demo script.
+
+Core stack:
+- React + TypeScript frontend
+- Tailwind CSS
+- Express or equivalent Node backend
+- PostgreSQL database
+- No login for MVP
+- Use an edit_token so the creator can edit their project
+- Public pages should be accessible by slug
+
+Important routes:
+- / landing page
+- /new create project form
+- /edit/:id editor page, requires token query param
+- /p/:slug public proof page
+- /card/:slug screenshot-friendly progress card
+
+Data:
+Create projects and milestones tables.
+Projects have title, builder_name, one_liner, starting_state, current_state, replit_url, demo_url, start_time, published, generated_summary, generated_demo_script, slug, edit_token.
+Milestones have project_id, sort_order, occurred_at, type, title, description, blocker, breakthrough, optional screenshot_data.
+
+Screenshot handling:
+For MVP, allow small image uploads and store compressed/base64 image data in the database. Add a visible warning if an image is too large.
+
+AI generation:
+Add a “Generate Judge Summary” button and a “Generate Demo Script” button. Use the available AI integration or placeholder service abstraction if no key is configured. The generation must use only the project and milestone data. It must not invent features.
+
+Design direction:
+Dark, cinematic, polished. Not generic SaaS blue. Use the language of evidence, resurrection, proof, timeline, artifacts. Make the public proof page feel like a beautiful case file. Strong typography, cards, timeline, before/after contrast, screenshot panels, and copy buttons.
+
+Landing page copy:
+Headline: “Your idea was dead this morning. Prove it’s alive now.”
+Subheadline: “Turn your 24-hour sprint into a judge-ready proof page: timeline, screenshots, breakthroughs, demo script, and before/after story.”
+Primary CTA: “Create Proof Page”
+Secondary CTA: “View Example”
+
+Seed the app with one example project so the landing page and public page look alive immediately.
+
+Success criteria:
+- User can create a project.
+- User can add/edit/delete milestones.
+- User can upload at least one screenshot.
+- User can publish a public page.
+- User can copy judge summary and demo script.
+- The public page looks excellent on desktop and acceptable on mobile.
+- The app should be deployable on Replit.
