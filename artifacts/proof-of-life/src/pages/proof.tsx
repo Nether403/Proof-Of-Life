@@ -30,9 +30,15 @@ export default function ProofPage() {
     document.title = `${project.title} — Proof of Life`;
   }
 
-  const sortedMilestones = [...(project.milestones || [])].sort(
-    (a, b) => new Date(a.occurred_at).getTime() - new Date(b.occurred_at).getTime()
-  );
+  // Order matches the editor's reorder UI: explicit sort_order is primary,
+  // occurred_at is the stable tiebreaker so newly-filed evidence still falls
+  // into chronological place when sort_order ties.
+  const sortedMilestones = [...(project.milestones || [])].sort((a, b) => {
+    if (a.sort_order !== b.sort_order) return a.sort_order - b.sort_order;
+    return (
+      new Date(a.occurred_at).getTime() - new Date(b.occurred_at).getTime()
+    );
+  });
   
   const firstBreakthrough = sortedMilestones.find(m => m.breakthrough);
   const blockers = sortedMilestones.filter(m => m.blocker);
