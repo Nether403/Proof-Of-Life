@@ -504,6 +504,9 @@ function MilestoneManager({
                   breakthrough: isBreakthrough,
                   blocker: isBlocker,
                   occurred_at: new Date(editDraft.occurred_at).toISOString(),
+                  // Always send screenshot_data so users can replace it with a
+                  // new compressed image or null it out via the Remove button.
+                  screenshot_data: editDraft.screenshot_data,
                 },
               },
               {
@@ -514,6 +517,38 @@ function MilestoneManager({
                 onError: showMutationError("amend evidence"),
               },
             );
+          };
+          const handleEditFile = async (
+            e: React.ChangeEvent<HTMLInputElement>,
+          ) => {
+            const file = e.target.files?.[0];
+            if (!file || !editDraft) return;
+            if (!SCREENSHOT_ALLOWED_TYPES.includes(file.type)) {
+              toast({
+                title: "Invalid format",
+                description: "Only PNG, JPG, WEBP allowed",
+                variant: "destructive",
+              });
+              return;
+            }
+            if (file.size > SCREENSHOT_INPUT_MAX_BYTES) {
+              toast({
+                title: "File too large",
+                description: "Source image must be under 10 MB",
+                variant: "destructive",
+              });
+              return;
+            }
+            try {
+              const dataUrl = await compressImageToDataUrl(file);
+              setEditDraft({ ...editDraft, screenshot_data: dataUrl });
+            } catch {
+              toast({
+                title: "Could not compress screenshot",
+                description: "Try a smaller or simpler image",
+                variant: "destructive",
+              });
+            }
           };
           return ordered.map((m, idx) => {
             const draft = editingId === m.id ? editDraft : null;
@@ -569,6 +604,40 @@ function MilestoneManager({
                     }
                     className="bg-background border-border"
                   />
+                  <div className="space-y-2">
+                    <Label className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
+                      Screenshot (Max 500KB)
+                    </Label>
+                    {draft.screenshot_data && (
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={draft.screenshot_data}
+                          alt="Current evidence"
+                          className="max-h-24 border border-border"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="font-mono text-xs h-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={() =>
+                            setEditDraft({
+                              ...draft,
+                              screenshot_data: null,
+                            })
+                          }
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    )}
+                    <Input
+                      type="file"
+                      accept="image/png, image/jpeg, image/webp"
+                      onChange={handleEditFile}
+                      className="bg-background border-border text-xs"
+                    />
+                  </div>
                   <div className="flex gap-2">
                     <Button
                       onClick={() => saveEdit(m.id)}
