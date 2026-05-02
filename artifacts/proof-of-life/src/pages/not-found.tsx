@@ -1,6 +1,7 @@
 import { Link } from "wouter";
 import { Layout } from "@/components/layout";
 import { Button } from "@/components/ui/button";
+import { SEEDED_EXAMPLE_PATH } from "@/lib/api";
 
 export default function NotFound() {
   return (
@@ -23,10 +24,7 @@ export default function NotFound() {
               Return to front desk
             </Button>
           </Link>
-          <Link
-            href="/p/alive-or-dead-the-deadwords-resurrection"
-            className="w-full sm:w-auto"
-          >
+          <Link href={SEEDED_EXAMPLE_PATH} className="w-full sm:w-auto">
             <Button
               variant="outline"
               className="w-full font-mono uppercase text-xs border-primary/40 text-primary hover:bg-primary/10"

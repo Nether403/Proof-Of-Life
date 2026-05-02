@@ -281,6 +281,17 @@ export function shareLinkForSlug(slug: string): string {
   return `${base}${import.meta.env.BASE_URL}p/${slug}`;
 }
 
+/**
+ * Slug of the seeded example case. Centralized so the home page,
+ * 404 fallback, and not-found page all link to the same dossier
+ * without duplicating the literal string. Must stay in sync with
+ * the seed in artifacts/api-server/src/lib/seed.ts.
+ */
+export const SEEDED_EXAMPLE_SLUG =
+  "alive-or-dead-the-deadwords-resurrection";
+
+export const SEEDED_EXAMPLE_PATH = `/p/${SEEDED_EXAMPLE_SLUG}`;
+
 export function localStorageKeyForProject(id: number): string {
   return `proof-of-life:edit-token:${id}`;
 }

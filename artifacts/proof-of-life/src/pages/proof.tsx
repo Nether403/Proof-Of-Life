@@ -12,6 +12,7 @@ import {
 import {
   localStorageKeyForProject,
   shareLinkForSlug,
+  SEEDED_EXAMPLE_PATH,
   type Project,
 } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -44,14 +45,14 @@ export default function ProofPage() {
 
   if (isLoading)
     return (
-      <Layout>
+      <Layout size="wide">
         <DossierSkeleton />
       </Layout>
     );
 
   if (isError || !project) {
     return (
-      <Layout>
+      <Layout size="wide">
         <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-6">
           <div className="font-mono text-xs sm:text-sm tracking-widest text-destructive uppercase border border-destructive/30 px-3 py-1">
             Error 404
@@ -72,7 +73,7 @@ export default function ProofPage() {
                 Return to front desk
               </Button>
             </Link>
-            <Link href="/p/alive-or-dead-the-deadwords-resurrection" className="w-full sm:w-auto">
+            <Link href={SEEDED_EXAMPLE_PATH} className="w-full sm:w-auto">
               <Button
                 variant="outline"
                 className="w-full font-mono uppercase text-xs border-primary/40 text-primary hover:bg-primary/10"
@@ -129,7 +130,7 @@ export default function ProofPage() {
       : `${pad2(blockers.length)} survived`;
 
   return (
-    <Layout>
+    <Layout size="wide">
       <div className="space-y-16 md:space-y-20 pb-16">
         {/* Case-file masthead */}
         <header className="space-y-6 border-b border-border pb-10">
